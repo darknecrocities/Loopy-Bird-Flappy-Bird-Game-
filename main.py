@@ -21,24 +21,24 @@ WHITE = (255, 255, 255)
 GREEN = (34, 177, 76)
 BLUE = (0, 162, 232)
 BLACK = (0, 0, 0)
-YELLOW = (255, 255, 0)
-RED = (200, 0, 0)
 
 # Load assets
-bg = pygame.image.load("bg.jpg")  # Background image
-bg = pygame.transform.scale(bg, (WIDTH, HEIGHT))
+bg = pygame.transform.scale(pygame.image.load("bg.jpg"), (WIDTH, HEIGHT))
+land = pygame.transform.scale(pygame.image.load("land.png"), (WIDTH, 100)) 
+cloud = pygame.transform.scale(pygame.image.load("cloud.webp"), (80, 50))
+tree = pygame.transform.scale(pygame.image.load("tree.webp"), (60, 100))
 
 # Setup display
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("loopy Bird")
+pygame.display.set_caption("Loopy Bird")
 
-# Function to create pipes
 def create_pipe():
+    """Creates a new pipe with a random height."""
     pipe_height = random.randint(100, 400)
-    pipes.append([WIDTH, pipe_height, False])  # False means score hasn't been counted yet
+    return [WIDTH, pipe_height, False]
 
-# Countdown before the game starts
 def countdown():
+    """Displays a countdown before the game starts."""
     for i in range(3, 0, -1):
         screen.blit(bg, (0, 0))
         text = FONT.render(f"Starting in {i}...", True, BLUE)
@@ -46,146 +46,115 @@ def countdown():
         pygame.display.flip()
         time.sleep(1)
 
-# Start screen
 def start_screen():
+    """Displays the start screen and waits for SPACE key press."""
     screen.fill(WHITE)
     text = FONT.render("Press SPACE to start", True, BLACK)
     screen.blit(text, (WIDTH // 2 - 100, HEIGHT // 2))
     pygame.display.flip()
-    waiting = True
-    while waiting:
+    while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 exit()
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
-                    waiting = False
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                return
 
-# Game over screen
 def game_over(final_score):
+    """Displays the game over screen with the final score."""
     screen.fill(WHITE)
-    text1 = FONT.render("Game Over!", True, BLACK)
-    score_text = FONT.render(f"Final Score: {final_score}", True, BLACK)
-    text2 = FONT.render("Press R to Restart", True, BLACK)
-    text3 = FONT.render("or", True, BLACK)
-    text4 = FONT.render("Q to Quit", True, BLACK)
-
-    text1_rect = text1.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 70))
-    score_text_rect = score_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 30))
-    text2_rect = text2.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 20))
-    text3_rect = text3.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50))
-    text4_rect = text4.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 80))
-
-    screen.blit(text1, text1_rect)
-    screen.blit(score_text, score_text_rect)
-    screen.blit(text2, text2_rect)
-    screen.blit(text3, text3_rect)
-    screen.blit(text4, text4_rect)
-
+    texts = ["Game Over!", f"Final Score: {final_score}", "Press R to Restart", "or", "Q to Quit"]
+    for i, t in enumerate(texts):
+        text = FONT.render(t, True, BLACK)
+        text_rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 70 + (i * 30)))
+        screen.blit(text, text_rect)
     pygame.display.flip()
     
-    waiting = True
-    while waiting:
+    while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 exit()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_r:
-                    waiting = False
-                    main_game()  # Restart game
+                    main_game()
                 if event.key == pygame.K_q:
                     pygame.quit()
                     exit()
 
 def draw_bird(y):
-    """Draw a simple bird with a circle body, eye, and beak"""
-    pygame.draw.ellipse(screen, BLUE, (BIRD_X - 20, BIRD_Y - 10, 20, 10), 3)
-    pygame.draw.ellipse(screen, BLUE, (BIRD_X, BIRD_Y - 10, 20, 10), 3)
+    """Draws the bird."""
+    pygame.draw.ellipse(screen, WHITE, (BIRD_X - 20, y - 10, 20, 10), 3)
+    pygame.draw.ellipse(screen, WHITE, (BIRD_X, y - 10, 20, 10), 3)
 
-def draw_pipes():
-    """Draw pipes with rounded edges for a smoother look"""
+def draw_pipes(pipes):
+    """Draws all pipes."""
     for pipe in pipes:
         pygame.draw.rect(screen, GREEN, (pipe[0], 0, PIPE_WIDTH, pipe[1]), border_radius=10)
         pygame.draw.rect(screen, GREEN, (pipe[0], pipe[1] + PIPE_GAP, PIPE_WIDTH, HEIGHT - pipe[1] - PIPE_GAP), border_radius=10)
 
 def main_game():
-    global BIRD_Y, bird_y_velocity, pipes, scores, PIPE_SPEED
-    BIRD_Y = HEIGHT // 2
+    """Main game loop."""
+    bird_y = HEIGHT // 2
     bird_y_velocity = 0
-    pipes = []
-    scores = 0
-    PIPE_SPEED = 5  # Start with the base speed
+    pipes = [create_pipe()]
+    score = 0
+    pipe_speed = PIPE_SPEED
+    bg_x = 0
     running = True
-    bg_x = 0  # Background scrolling position
     
     start_screen()
     countdown()
-    create_pipe()
-
     clock = pygame.time.Clock()
+    
     while running:
-        # Scroll background
-        screen.blit(bg, (bg_x, 0))
-        screen.blit(bg, (bg_x + WIDTH, 0))
-        bg_x -= 2
-        if bg_x <= -WIDTH:
-            bg_x = 0  # Reset background position
+        screen.blit(bg, (bg_x, 0))  # Draw background
+        screen.blit(bg, (bg_x + WIDTH, 0))  # For scrolling effect
+        screen.blit(land, (0, HEIGHT - 100))  # Draw land at the bottom
+        screen.blit(cloud, (WIDTH // 2, 100))
+        screen.blit(tree, (30, HEIGHT - 120))
+        screen.blit(tree, (WIDTH - 90, HEIGHT - 120))
+        
+        bg_x = (bg_x - 2) % -WIDTH  # Scrolling background effect
         
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 exit()
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
-                    bird_y_velocity = JUMP_STRENGTH
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                bird_y_velocity = JUMP_STRENGTH
         
-        # Bird physics
         bird_y_velocity += GRAVITY
-        BIRD_Y += bird_y_velocity
-
-        # Draw pipes
-        draw_pipes()
-
-        # Pipe movement and collision
-        for pipe in pipes:
-            pipe[0] -= PIPE_SPEED  # Move pipe left
-            
-            # Collision detection
-            if (BIRD_X + BIRD_RADIUS > pipe[0] and BIRD_X - BIRD_RADIUS < pipe[0] + PIPE_WIDTH and
-                (BIRD_Y - BIRD_RADIUS < pipe[1] or BIRD_Y + BIRD_RADIUS > pipe[1] + PIPE_GAP)):
-                running = False
-            
-            # Score update
-            if pipe[0] + PIPE_WIDTH < BIRD_X and not pipe[2]:  # Passed pipe
-                scores += 1
-                pipe[2] = True  # Mark pipe as counted
-                
-                # **Increase speed every 5 points**
-                if scores % 5 == 0:
-                    PIPE_SPEED += 1
+        bird_y += bird_y_velocity
         
-        # Remove off-screen pipes and add new ones
+        for pipe in pipes:
+            pipe[0] -= pipe_speed
+            if (BIRD_X + BIRD_RADIUS > pipe[0] and BIRD_X - BIRD_RADIUS < pipe[0] + PIPE_WIDTH and
+                (bird_y - BIRD_RADIUS < pipe[1] or bird_y + BIRD_RADIUS > pipe[1] + PIPE_GAP)):
+                running = False
+            if pipe[0] + PIPE_WIDTH < BIRD_X and not pipe[2]:
+                score += 1
+                pipe[2] = True
+                if score % 5 == 0:
+                    pipe_speed += 1
+        
         if pipes and pipes[0][0] < -PIPE_WIDTH:
             pipes.pop(0)
-            create_pipe()
+            pipes.append(create_pipe())
+        
+        draw_pipes(pipes)
+        draw_bird(bird_y)
+        score_text = FONT.render(f"Score: {score}", True, BLACK)
+        score_rect = score_text.get_rect(topleft=(10, 10))
+        pygame.draw.rect(screen, WHITE, score_rect.inflate(10, 10))  # White box with padding
+        screen.blit(score_text, score_rect)
 
-        # Draw bird
-        draw_bird(BIRD_Y)
-
-        # Display score
-        score_text = FONT.render(f"Score: {scores}", True, BLACK)
-        screen.blit(score_text, (10, 10))
-
-        # Check for game over
-        if BIRD_Y > HEIGHT or BIRD_Y < 0:
+        if bird_y > HEIGHT or bird_y < 0:
             running = False
         
         pygame.display.flip()
-        clock.tick(60)  # **Smoother 60 FPS**
+        clock.tick(60)
+    
+    game_over(score)
 
-    game_over(scores)  # Show game over screen with final score
-
-# Run the game
 main_game()
