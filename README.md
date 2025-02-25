@@ -23,7 +23,7 @@ pip install pygame
 To start playing, simply run:
 
 ```bash
-python loopy_bird.py
+python main.py
 ```
 
 ## 🖼️ Features
